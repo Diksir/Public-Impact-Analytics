@@ -6,6 +6,7 @@ It compares publicly documented governance, institutional leadership, and public
 
 - Dr. Jamilu Isyaku Gwamna
 - Prof. Isa Ali Ibrahim Pantami
+- Hon. Saidu Ahmed Alkali
 
 The platform is neutral, evidence-based, and designed for civic research. It does not make campaign claims, does not infer criminality or misconduct, and does not treat missing data as evidence of poor performance.
 
@@ -23,6 +24,7 @@ The platform is neutral, evidence-based, and designed for civic research. It doe
   - `references.docx`
 - Social-media infographic CSV/PNG-ready data
 - Tableau/Power BI-ready exports
+- Transportation policy dashboard for rail, logistics, public transport reform, and transport-sector accountability evidence
 
 ## Install
 
@@ -69,4 +71,3 @@ Scores are calculated only from evidence rows with source metadata. Where public
 This project is an independent governance analytics and civic-tech research platform based on publicly available information.
 
 All claims are tied to source records. Scores are analytical estimates based on the stated methodology, not definitive judgments of personal character or overall public worth.
-

@@ -29,6 +29,8 @@ CATEGORIES = [
     "Innovation",
 ]
 
+LEADER_COLORS = ["#68d85f", "#5f8cff", "#f4bd3c", "#28c4b7", "#ff8a3c"]
+
 CATEGORY_LABELS = {
     "Infrastructure": "Infrastructure Development",
     "Economy": "Economic Impact",
@@ -51,6 +53,7 @@ PAGE_NAMES = [
     "Overview",
     "Executive Summary",
     "Infrastructure",
+    "Transportation Policy",
     "Economy",
     "Youth Empowerment",
     "Crisis Management",
@@ -72,7 +75,7 @@ st.set_page_config(
 
 
 @st.cache_data
-def load_data():
+def load_data(data_version: float):
     return {
         "evidence": pd.read_csv(DATA / "clean_evidence_ledger.csv"),
         "sources": pd.read_csv(DATA / "source_verification_table.csv"),
@@ -83,10 +86,20 @@ def load_data():
     }
 
 
+def data_version() -> float:
+    files = [
+        DATA / "clean_evidence_ledger.csv",
+        DATA / "source_verification_table.csv",
+        DATA / "category_scores.csv",
+        DATA / "leader_scores.csv",
+        DATA / "timeline.csv",
+        DATA / "scoring_weights.csv",
+    ]
+    return sum(path.stat().st_mtime for path in files if path.exists())
+
+
 def ensure_dataset_zip() -> Path:
     zip_path = EXPORTS / "all_governance_datasets.zip"
-    if zip_path.exists():
-        return zip_path
     with ZipFile(zip_path, "w") as archive:
         for path in EXPORTS.glob("*"):
             if path.is_file() and path.name != zip_path.name:
@@ -510,7 +523,6 @@ def build_plot_theme(fig, height=330):
 
 def radar_chart(category_scores: pd.DataFrame):
     fig = go.Figure()
-    colors = ["#68d85f", "#5f8cff"]
     for i, (person, group) in enumerate(category_scores.groupby("person")):
         ordered = group.set_index("category").reindex(CATEGORIES).reset_index()
         fig.add_trace(
@@ -519,7 +531,7 @@ def radar_chart(category_scores: pd.DataFrame):
                 theta=[CATEGORY_LABELS.get(x, x) for x in ordered["category"]],
                 fill="toself",
                 name=person,
-                line_color=colors[i % len(colors)],
+                line_color=LEADER_COLORS[i % len(LEADER_COLORS)],
                 opacity=0.78,
             )
         )
@@ -540,7 +552,7 @@ def category_bar(category_scores: pd.DataFrame):
         y="category_score",
         color="person",
         barmode="group",
-        color_discrete_sequence=["#68d85f", "#5f8cff"],
+        color_discrete_sequence=LEADER_COLORS,
         category_orders={"category": CATEGORIES},
         labels={"category_score": "Score", "category": ""},
     )
@@ -569,7 +581,6 @@ def trend_chart(timeline: pd.DataFrame, category_scores: pd.DataFrame):
         traces.append((person, values))
 
     fig = go.Figure()
-    colors = ["#68d85f", "#5f8cff"]
     for i, (person, values) in enumerate(traces):
         fig.add_trace(
             go.Scatter(
@@ -577,7 +588,7 @@ def trend_chart(timeline: pd.DataFrame, category_scores: pd.DataFrame):
                 y=values,
                 mode="lines+markers",
                 name=person,
-                line=dict(color=colors[i % len(colors)], width=2),
+                line=dict(color=LEADER_COLORS[i % len(LEADER_COLORS)], width=2),
                 marker=dict(size=7),
             )
         )
@@ -697,22 +708,30 @@ def render_kpis(category_scores: pd.DataFrame):
     cards = []
     for cat in CATEGORIES:
         row = piv.loc[cat] if cat in piv.index else pd.Series(dtype=float)
-        left = float(row.get(people[0], 0)) if people else 0
-        right = float(row.get(people[1], 0)) if len(people) > 1 else 0
+        score_spans = []
+        for idx, person in enumerate(people):
+            value = float(row.get(person, 0))
+            score_spans.append(
+                f"<span style='color:{LEADER_COLORS[idx % len(LEADER_COLORS)]};'>{value:.1f}</span>"
+            )
         weight = category_scores.loc[category_scores["category"].eq(cat), "weight"].max()
         cards.append(
             f"<div class='kpi-card'>"
             f"<div class='icon-badge'>{icons.get(cat, 'KPI')}</div>"
             f"<div class='kpi-title'>{CATEGORY_LABELS.get(cat, cat)}<br/>({int(float(weight) * 100)}%)</div>"
-            f"<div class='kpi-scores'><span class='green'>{left:.1f}</span><span class='blue'>{right:.1f}</span></div>"
+            f"<div class='kpi-scores'>{''.join(score_spans)}</div>"
             f"</div>"
+        )
+    legend_items = []
+    for idx, person in enumerate(people):
+        legend_items.append(
+            f"<span><span class='legend-dot' style='background:{LEADER_COLORS[idx % len(LEADER_COLORS)]};'></span>{person}</span>"
         )
     st.markdown(
         f"""
         <div class="kpi-row">{"".join(cards)}</div>
         <div class="legend">
-          <span><span class="legend-dot" style="background:#68d85f;"></span>Dr. Jamilu Isyaku Gwamna</span>
-          <span><span class="legend-dot" style="background:#5f8cff;"></span>Prof. Isa Ali Ibrahim Pantami</span>
+          {"".join(legend_items)}
         </div>
         """,
         unsafe_allow_html=True,
@@ -804,7 +823,7 @@ def page_category(title: str, category: str, category_scores: pd.DataFrame, evid
             x="person",
             y="category_score",
             color="person",
-            color_discrete_sequence=["#68d85f", "#5f8cff"],
+            color_discrete_sequence=LEADER_COLORS,
             labels={"category_score": "Score", "person": ""},
         )
         fig.update_yaxes(range=[0, 100])
@@ -896,6 +915,66 @@ def page_category(title: str, category: str, category_scores: pd.DataFrame, evid
         ],
         use_container_width=True,
         hide_index=True,
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+def page_transportation_policy(data: dict):
+    st.markdown("<h2>Transportation Policy Dashboard</h2>", unsafe_allow_html=True)
+    evidence = data["evidence"]
+    alkali = evidence[evidence["person"].eq("Hon. Saidu Ahmed Alkali")].copy()
+    transport_terms = (
+        alkali["indicator"].str.contains("rail|transport|freight|policy|logistics|Kano|Kaduna|budget|FERMA", case=False, na=False)
+        | alkali["claim_summary"].str.contains("rail|transport|freight|policy|logistics|Kano|Kaduna|budget|FERMA", case=False, na=False)
+    )
+    transport = alkali[transport_terms].copy()
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("Transport Evidence Rows", f"{len(transport):,}")
+    c2.metric("Quantitative Rows", f"{int((transport['evidence_type'] == 'quantitative').sum()):,}")
+    c3.metric("Rail/Infra Items", f"{int(transport['category'].eq('Infrastructure').sum()):,}")
+    c4.metric("Policy/Innovation Items", f"{int(transport['category'].eq('Innovation').sum()):,}")
+
+    left, right = st.columns([1.1, 1], gap="medium")
+    with left:
+        st.markdown('<div class="panel"><h3>Transport-Related Score Profile</h3>', unsafe_allow_html=True)
+        alkali_scores = data["category_scores"][data["category_scores"]["person"].eq("Hon. Saidu Ahmed Alkali")]
+        fig = px.bar(
+            alkali_scores,
+            x="category",
+            y="category_score",
+            color="category",
+            color_discrete_sequence=LEADER_COLORS,
+            category_orders={"category": CATEGORIES},
+            labels={"category_score": "Score", "category": ""},
+        )
+        fig.update_yaxes(range=[0, 100])
+        st.plotly_chart(build_plot_theme(fig, height=360), use_container_width=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+    with right:
+        st.markdown('<div class="panel"><h3>Policy And Reform Evidence</h3>', unsafe_allow_html=True)
+        st.dataframe(
+            transport[
+                [
+                    "category",
+                    "indicator",
+                    "metric_value",
+                    "metric_unit",
+                    "metric_year",
+                    "evidence_type",
+                    "confidence",
+                    "source_id",
+                ]
+            ],
+            hide_index=True,
+            use_container_width=True,
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="panel"><h3>Transportation Evidence Narrative</h3>', unsafe_allow_html=True)
+    st.dataframe(
+        transport[["indicator", "claim_summary", "attribution_note", "title", "url"]],
+        hide_index=True,
+        use_container_width=True,
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -1028,12 +1107,14 @@ def page_about():
 
 def main():
     local_css()
-    data = load_data()
+    data = load_data(data_version())
     page, period, selected_category = render_sidebar(data)
     evidence, category_scores = filtered_data(data, period, selected_category)
 
     if page in {"Overview", "Executive Summary"}:
         page_overview(data, category_scores, evidence)
+    elif page == "Transportation Policy":
+        page_transportation_policy(data)
     elif page in PAGE_TO_CATEGORY:
         page_category(page, PAGE_TO_CATEGORY[page], data["category_scores"], evidence)
     elif page == "Governance Scorecard":
