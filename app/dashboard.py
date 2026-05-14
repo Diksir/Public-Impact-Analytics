@@ -1126,9 +1126,8 @@ def render_sidebar(data: dict):
         unsafe_allow_html=True,
     )
     page = st.sidebar.radio("Navigation", PAGE_NAMES, label_visibility="collapsed")
+    period = "All Years"
     st.sidebar.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
-    years = sorted([int(y) for y in data["evidence"]["metric_year"].dropna().unique()])
-    period = st.sidebar.selectbox("Scored Evidence Period", ["All Years"] + [str(y) for y in years])
     category = st.sidebar.selectbox("Category Filter", ["All Categories"] + CATEGORIES)
     st.sidebar.markdown(
         """
@@ -1558,8 +1557,19 @@ def page_leadership_profiles(timeline: pd.DataFrame, sources: pd.DataFrame):
 
 def page_timeline(timeline: pd.DataFrame, sources: pd.DataFrame):
     st.markdown("<h2>Leadership Journey Timeline</h2>", unsafe_allow_html=True)
+    c1, c2 = st.columns([1, 1], gap="medium")
+    with c1:
+        candidate_filter = st.selectbox("Candidate Timeline", ["All Candidates"] + ordered_people(timeline["candidate_name"].dropna().unique()))
+    with c2:
+        stage_filter = st.selectbox("Life Stage", ["All Life Stages"] + list(dict.fromkeys(timeline["life_stage"].dropna())))
+    visible_timeline = timeline.copy()
+    if candidate_filter != "All Candidates":
+        visible_timeline = visible_timeline[visible_timeline["candidate_name"].eq(candidate_filter)]
+    if stage_filter != "All Life Stages":
+        visible_timeline = visible_timeline[visible_timeline["life_stage"].eq(stage_filter)]
+
     st.markdown('<div class="panel"><h3>Full Life-Cycle Leadership Timeline</h3>', unsafe_allow_html=True)
-    clean = timeline.copy()
+    clean = visible_timeline.copy()
     clean["metric_year"] = parse_timeline_years(clean)
     clean = clean.dropna(subset=["metric_year"])
     clean["metric_year"] = clean["metric_year"].astype(int)
@@ -1575,13 +1585,13 @@ def page_timeline(timeline: pd.DataFrame, sources: pd.DataFrame):
         category_orders={"candidate_name": ordered_people(clean["candidate_name"].dropna().unique())},
     )
     st.plotly_chart(build_plot_theme(fig, height=380), use_container_width=True, config={"responsive": True, "displayModeBar": False})
-    enriched = timeline.merge(
+    enriched = visible_timeline.merge(
         sources[["source_id", "title", "organization", "url"]],
         left_on="citation",
         right_on="source_id",
         how="left",
     ).drop(columns=["source_id"])
-    st.dataframe(timeline, use_container_width=True, hide_index=True)
+    st.dataframe(visible_timeline, use_container_width=True, hide_index=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown('<div class="panel"><h3>Citations Beside Timeline Claims</h3>', unsafe_allow_html=True)
