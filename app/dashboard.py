@@ -1187,99 +1187,6 @@ def h(value) -> str:
     return html.escape("" if pd.isna(value) else str(value))
 
 
-def evidence_strength_label(kind: str) -> str:
-    return {
-        "quantitative": "stronger because it contains a measurable value",
-        "project_report": "moderate because it documents a project or implementation activity",
-        "regulator_context": "moderate because it comes from regulator or oversight context",
-        "policy_target_context": "contextual because it describes a target or policy environment",
-        "qualitative": "limited because it is narrative or interview-based evidence",
-        "insufficient_public_evidence": "not scored because public evidence is insufficient",
-    }.get(str(kind), "contextual evidence")
-
-
-def render_result_explanation(
-    title: str,
-    evidence: pd.DataFrame,
-    scores: pd.DataFrame | None = None,
-    category: str | None = None,
-    max_items_per_person: int = 3,
-):
-    st.markdown(f'<div class="panel"><h3>{h(title)}</h3>', unsafe_allow_html=True)
-    if evidence.empty:
-        st.markdown(
-            "<p class='muted'>No evidence rows match this selection. The platform does not create a result when public data is unavailable.</p>",
-            unsafe_allow_html=True,
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
-        return
-
-    score_lookup = {}
-    if scores is not None and not scores.empty:
-        score_lookup = {row["person"]: row for _, row in scores.iterrows()}
-
-    rows = []
-    for person in ordered_people(evidence["person"].dropna().unique()):
-        group = evidence[evidence["person"].eq(person)].copy()
-        if group.empty:
-            continue
-        quantitative = int(group["evidence_type"].eq("quantitative").sum())
-        insufficient = int(group["evidence_type"].eq("insufficient_public_evidence").sum())
-        source_count = int(group["source_id"].nunique())
-        score_row = score_lookup.get(person)
-        score_text = ""
-        if score_row is not None:
-            score_text = (
-                f"<p><strong>Score logic:</strong> {float(score_row['category_score']):.1f}/100 category score, "
-                f"{float(score_row['weight']) * 100:.0f}% category weight, "
-                f"{float(score_row['weighted_points']):.2f} weighted points. "
-                f"Coverage status: <code>{h(score_row['coverage_status'])}</code>.</p>"
-            )
-
-        evidence_items = []
-        ranked = group.assign(_rank=group["evidence_type"].map({"quantitative": 0, "project_report": 1, "regulator_context": 2, "policy_target_context": 3, "qualitative": 4, "insufficient_public_evidence": 5}).fillna(6))
-        ranked = ranked.sort_values(["_rank", "confidence"], ascending=[True, False]).head(max_items_per_person)
-        for _, item in ranked.iterrows():
-            metric = ""
-            if pd.notna(item.get("metric_value")) and str(item.get("metric_value")).strip():
-                metric = f" Metric: <strong>{h(item.get('metric_value'))} {h(item.get('metric_unit'))}</strong>."
-            source_label = h(item.get("source_id"))
-            if pd.notna(item.get("url")) and str(item.get("url")).strip():
-                source_label = f"<a href='{h(item.get('url'))}' target='_blank'>{source_label}</a>"
-            evidence_items.append(
-                f"<li><strong>{h(item.get('indicator'))}</strong>: {h(item.get('claim_summary'))}"
-                f"{metric} Source: {source_label} ({h(item.get('organization'))}). "
-                f"Evidence type: <code>{h(item.get('evidence_type'))}</code>, "
-                f"{evidence_strength_label(item.get('evidence_type'))}; confidence {float(item.get('confidence', 0)):.2f}.</li>"
-            )
-
-        limitation = ""
-        if insufficient:
-            limitation = (
-                f"<p class='muted'><strong>Limitation:</strong> {insufficient} row(s) were marked as insufficient public evidence, "
-                "so they did not add positive points. Missing public data is treated as a research gap, not proof of poor performance.</p>"
-            )
-        elif quantitative == 0:
-            limitation = (
-                "<p class='muted'><strong>Limitation:</strong> this result is based on narrative, project, or contextual evidence rather than audited numeric outcome data.</p>"
-            )
-
-        rows.append(
-            f"<div class='source-row' style='display:block;margin-bottom:10px;'>"
-            f"<p><strong>{h(person)}</strong></p>"
-            f"<p>This result used {len(group)} evidence row(s), {source_count} cited source(s), and {quantitative} quantitative row(s)"
-            f"{' for ' + h(category) if category else ''}.</p>"
-            f"{score_text}<ul>{''.join(evidence_items)}</ul>{limitation}</div>"
-        )
-
-    st.markdown("".join(rows), unsafe_allow_html=True)
-    st.markdown(
-        "<p class='muted'>Method note: quantitative rows receive the strongest base score, project/regulator rows receive moderate weight, qualitative rows receive lower weight, and unsupported rows receive no positive score.</p>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
 def render_app_nav():
     st.markdown(
         """
@@ -1371,9 +1278,16 @@ def render_kpis(category_scores: pd.DataFrame):
     ordered_scores = ordered_leader_frame(category_scores)
     piv = ordered_scores.pivot_table(index="category", columns="person", values="category_score", aggfunc="mean")
     people = ordered_people(ordered_scores["person"].drop_duplicates())
+    available_categories = set(ordered_scores["category"].dropna().unique())
+    visible_categories = [cat for cat in CATEGORIES if cat in available_categories] or CATEGORIES
+    weight_lookup = (
+        ordered_scores.assign(weight=pd.to_numeric(ordered_scores["weight"], errors="coerce"))
+        .groupby("category")["weight"]
+        .max()
+    )
     st.markdown('<h3 id="key-performance-indicators-overall">Key Performance Indicators <span class="muted">(Overall)</span></h3>', unsafe_allow_html=True)
     cards = []
-    for cat in CATEGORIES:
+    for cat in visible_categories:
         row = piv.loc[cat] if cat in piv.index else pd.Series(dtype=float)
         score_spans = []
         for idx, person in enumerate(people):
@@ -1381,11 +1295,12 @@ def render_kpis(category_scores: pd.DataFrame):
             score_spans.append(
                 f"<span style='color:{leader_color(person)};'>{value:.1f}</span>"
             )
-        weight = category_scores.loc[category_scores["category"].eq(cat), "weight"].max()
+        weight = weight_lookup.get(cat)
+        weight_label = f"{float(weight) * 100:.0f}%" if pd.notna(weight) else "N/A"
         cards.append(
             f"<div class='kpi-card'>"
             f"<div class='icon-badge'>{icons.get(cat, 'KPI')}</div>"
-            f"<div class='kpi-title'>{CATEGORY_LABELS.get(cat, cat)}<br/>({int(float(weight) * 100)}%)</div>"
+            f"<div class='kpi-title'>{CATEGORY_LABELS.get(cat, cat)}<br/>({weight_label})</div>"
             f"<div class='kpi-scores'>{''.join(score_spans)}</div>"
             f"</div>"
         )
@@ -1475,12 +1390,6 @@ def page_overview(data: dict, category_scores: pd.DataFrame, evidence: pd.DataFr
     with bottom_right:
         render_achievements(evidence)
 
-    render_result_explanation(
-        "How Did We Get The Overview Results?",
-        evidence,
-        data["category_scores"],
-        max_items_per_person=2,
-    )
     st.markdown(f'<div class="footer-note">Disclaimer: {DISCLAIMER}</div>', unsafe_allow_html=True)
 
 
@@ -1511,73 +1420,6 @@ def page_category(title: str, category: str, category_scores: pd.DataFrame, evid
             use_container_width=True,
         )
         st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown('<div class="panel"><h3>How This Category Earned Its Points</h3>', unsafe_allow_html=True)
-    explanation = filtered_scores.copy()
-    explanation["weight_percent"] = (explanation["weight"] * 100).round(0).astype(int).astype(str) + "%"
-    explanation["formula"] = (
-        explanation["category_score"].round(2).astype(str)
-        + " x "
-        + explanation["weight"].round(2).astype(str)
-        + " = "
-        + explanation["weighted_points"].round(2).astype(str)
-        + " overall points"
-    )
-    st.dataframe(
-        explanation[
-            [
-                "person",
-                "category_score",
-                "weight_percent",
-                "weighted_points",
-                "evidence_count",
-                "quantitative_count",
-                "formula",
-                "coverage_status",
-            ]
-        ],
-        hide_index=True,
-        use_container_width=True,
-    )
-    st.caption(
-        "Category score is the average of scored evidence rows. Weighted points are the category score multiplied by the category weight."
-    )
-    evidence_breakdown = filtered_evidence.copy()
-    evidence_breakdown["scoring_effect"] = evidence_breakdown["evidence_type"].map(
-        {
-            "quantitative": "High scoring weight because it has a measurable value.",
-            "project_report": "Medium scoring weight because it documents a project activity.",
-            "regulator_context": "Medium scoring weight because it comes from regulator context.",
-            "policy_target_context": "Medium scoring weight because it is policy target context.",
-            "qualitative": "Lower scoring weight because it is narrative evidence.",
-            "insufficient_public_evidence": "Not awarded positive points; kept as a data gap.",
-        }
-    ).fillna("Contextual evidence.")
-    st.dataframe(
-        evidence_breakdown[
-            [
-                "person",
-                "indicator",
-                "evidence_type",
-                "metric_value",
-                "metric_unit",
-                "confidence",
-                "evidence_score",
-                "scoring_effect",
-                "source_id",
-            ]
-        ],
-        hide_index=True,
-        use_container_width=True,
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
-
-    render_result_explanation(
-        f"How Did We Get This {title} Result?",
-        filtered_evidence,
-        filtered_scores,
-        category=category,
-    )
 
     st.markdown('<div class="panel"><h3>Evidence Ledger</h3>', unsafe_allow_html=True)
     st.dataframe(
@@ -1640,20 +1482,6 @@ def page_scorecards(category_scores: pd.DataFrame):
     )
     st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown(
-        """
-        <div class="panel">
-          <h3>How Did We Get The Governance Scores?</h3>
-          <p>The governance scorecard is not a popularity score. It is calculated from source-backed evidence rows grouped by candidate and category.</p>
-          <p><code>category_score = average evidence_score for scored rows</code></p>
-          <p><code>weighted_points = category_score x category weight</code></p>
-          <p><code>overall score = sum weighted_points across all categories</code></p>
-          <p class="muted">Rows with insufficient public evidence do not add positive points. Sector-level outcomes are treated as multi-actor outcomes, not as sole personal causation.</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
 
 def parse_timeline_years(timeline: pd.DataFrame) -> pd.Series:
     return pd.to_numeric(timeline["year_or_period"].astype(str).str.extract(r"(\d{4})", expand=False), errors="coerce")
@@ -1661,35 +1489,6 @@ def parse_timeline_years(timeline: pd.DataFrame) -> pd.Series:
 
 def source_options(sources: pd.DataFrame) -> dict:
     return sources.set_index("source_id")[["title", "organization", "url"]].to_dict("index")
-
-
-def render_lifecycle_explanation(timeline: pd.DataFrame, sources: pd.DataFrame):
-    st.markdown('<div class="panel"><h3>How Did We Build These Profiles?</h3>', unsafe_allow_html=True)
-    if timeline.empty:
-        st.markdown("<p class='muted'>No lifecycle rows match this selection.</p>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-        return
-    source_map = source_options(sources)
-    items = []
-    for _, row in timeline.head(8).iterrows():
-        source = source_map.get(row["citation"], {})
-        link = source.get("url", "")
-        source_label = h(row["citation"])
-        if link:
-            source_label = f"<a href='{h(link)}' target='_blank'>{source_label}</a>"
-        items.append(
-            f"<li><strong>{h(row['candidate_name'])} - {h(row['life_stage'])}</strong>: "
-            f"{h(row['year_or_period'])}, {h(row['role_or_event'])}. "
-            f"Source: {source_label} ({h(source.get('organization', 'Source'))}). "
-            f"Impact category: {h(row['impact_category'])}; score {float(row['impact_score']):.1f}.</li>"
-        )
-    st.markdown(
-        "<p>Profiles are built from public biographical records, official profiles, reputable journalism, policy documents, regulator reports, and source-labeled research limitations.</p>"
-        f"<ul>{''.join(items)}</ul>"
-        "<p class='muted'>Personal background is included only when publicly available and cited. Where childhood, family, or education details are not verifiable, the app marks a limitation instead of guessing.</p>",
-        unsafe_allow_html=True,
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def page_leadership_profiles(timeline: pd.DataFrame, sources: pd.DataFrame):
@@ -1718,7 +1517,6 @@ def page_leadership_profiles(timeline: pd.DataFrame, sources: pd.DataFrame):
     )
     st.markdown('<div class="panel"><h3>Lifecycle Coverage Snapshot</h3>', unsafe_allow_html=True)
     st.dataframe(coverage, use_container_width=True, hide_index=True)
-    st.caption("This table shows coverage, not political preference. Lower early-life coverage means fewer verifiable public records were found, not a negative judgment.")
     st.markdown("</div>", unsafe_allow_html=True)
 
     candidate = st.selectbox("Candidate", ordered_people(timeline["candidate_name"].dropna().unique()))
@@ -1759,8 +1557,6 @@ def page_leadership_profiles(timeline: pd.DataFrame, sources: pd.DataFrame):
             f"<div class='panel'><h3>{stage}</h3><ul>{''.join(items)}</ul></div>"
         )
     st.markdown("".join(cards), unsafe_allow_html=True)
-
-    render_lifecycle_explanation(profile, sources)
 
     st.markdown('<div class="panel"><h3>Candidate Lifecycle Dataset</h3>', unsafe_allow_html=True)
     st.dataframe(profile, use_container_width=True, hide_index=True)
@@ -1825,8 +1621,6 @@ def page_timeline(timeline: pd.DataFrame, sources: pd.DataFrame):
         hide_index=True,
     )
     st.markdown("</div>", unsafe_allow_html=True)
-
-    render_lifecycle_explanation(visible_timeline, sources)
 
 
 def page_sources(sources: pd.DataFrame, evidence: pd.DataFrame):
