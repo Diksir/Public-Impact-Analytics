@@ -1200,13 +1200,8 @@ def render_app_nav():
         MOBILE_PAGE_NAMES,
         label_visibility="collapsed",
     )
-    selected_category = st.selectbox(
-        "Category",
-        ["All Categories"] + CATEGORIES,
-        label_visibility="collapsed",
-    )
     st.markdown("</div>", unsafe_allow_html=True)
-    return selected_page, "All Years", selected_category
+    return selected_page, "All Years", "All Categories"
 
 
 def filtered_data(data: dict, period: str, category: str):
