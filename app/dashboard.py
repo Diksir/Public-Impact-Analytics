@@ -15,6 +15,7 @@ EXPORTS = ROOT / "data" / "exports"
 HERO_IMAGE = ROOT / "assets" / "images" / "gombe-hero.png"
 LEADER_IMAGES = {
     "Dr. Jamilu Isyaku Gwamna": ROOT / "assets" / "images" / "jamilu-gwamna.jpg",
+    "Hon. Saidu Ahmed Alkali": ROOT / "assets" / "images" / "saidu-alkali.jpg",
     "Prof. Isa Ali Ibrahim Pantami": ROOT / "assets" / "images" / "pantami.jpeg",
 }
 
