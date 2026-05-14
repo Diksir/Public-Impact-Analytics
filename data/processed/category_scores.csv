@@ -1,0 +1,15 @@
+person,category,weight,category_score,evidence_count,avg_confidence,quantitative_count,weighted_points,coverage_status
+Prof. Isa Ali Ibrahim Pantami,Infrastructure,0.2,71.77,3,0.77,2,14.35,quantitative_or_mixed
+Prof. Isa Ali Ibrahim Pantami,Economy,0.2,84.8,1,0.88,1,16.96,quantitative_or_mixed
+Prof. Isa Ali Ibrahim Pantami,Youth Empowerment,0.2,76.3,1,0.78,1,15.26,quantitative_or_mixed
+Prof. Isa Ali Ibrahim Pantami,Crisis Handling,0.15,36.3,1,0.66,0,5.44,qualitative_only
+Prof. Isa Ali Ibrahim Pantami,Transparency,0.1,74.6,1,0.76,1,7.46,quantitative_or_mixed
+Prof. Isa Ali Ibrahim Pantami,Public Utility Management,0.1,0.0,0,0.0,0,0.0,insufficient_public_evidence
+Prof. Isa Ali Ibrahim Pantami,Innovation,0.05,37.4,1,0.68,0,1.87,qualitative_only
+Dr. Jamilu Isyaku Gwamna,Infrastructure,0.2,46.24,1,0.68,0,9.25,qualitative_only
+Dr. Jamilu Isyaku Gwamna,Economy,0.2,0.0,0,0.0,0,0.0,insufficient_public_evidence
+Dr. Jamilu Isyaku Gwamna,Youth Empowerment,0.2,30.8,1,0.56,0,6.16,qualitative_only
+Dr. Jamilu Isyaku Gwamna,Crisis Handling,0.15,36.3,1,0.66,0,5.44,qualitative_only
+Dr. Jamilu Isyaku Gwamna,Transparency,0.1,41.63,2,0.66,0,4.16,qualitative_only
+Dr. Jamilu Isyaku Gwamna,Public Utility Management,0.1,62.5,2,0.8,1,6.25,quantitative_or_mixed
+Dr. Jamilu Isyaku Gwamna,Innovation,0.05,39.44,1,0.58,0,1.97,qualitative_only

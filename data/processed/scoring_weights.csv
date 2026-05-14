@@ -1,0 +1,8 @@
+category,weight,definition
+Infrastructure,0.2,"Physical/digital infrastructure delivery, access expansion, project implementation, and infrastructure reliability evidence."
+Economy,0.2,"Contribution to economic output, revenue, market development, productivity, and measurable sector growth."
+Youth Empowerment,0.2,"Digital skills, jobs, training, enterprise support, and youth-focused capacity-building outcomes."
+Crisis Handling,0.15,"Measured continuity, responsiveness, risk reduction, and service delivery during shocks or crises."
+Transparency,0.1,"Evidence quality, public reporting, auditability, open records, consumer protection, and verifiable accountability."
+Public Utility Management,0.1,Management of regulated public utility or essential-service institutions and measurable user outcomes.
+Innovation,0.05,"Policy, technology, institutional process, or service-design innovation backed by public evidence."
