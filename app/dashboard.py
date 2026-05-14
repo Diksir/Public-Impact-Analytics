@@ -34,7 +34,16 @@ CATEGORIES = [
     "Innovation",
 ]
 
+LEADER_ORDER = [
+    "Dr. Jamilu Isyaku Gwamna",
+    "Prof. Isa Ali Ibrahim Pantami",
+    "Hon. Saidu Ahmed Alkali",
+]
 LEADER_COLORS = ["#68d85f", "#5f8cff", "#f4bd3c", "#28c4b7", "#ff8a3c"]
+LEADER_COLOR_MAP = {
+    leader: LEADER_COLORS[index % len(LEADER_COLORS)]
+    for index, leader in enumerate(LEADER_ORDER)
+}
 
 CATEGORY_LABELS = {
     "Infrastructure": "Infrastructure Development",
@@ -880,6 +889,28 @@ def initials(person: str) -> str:
     return "".join(parts[:3]).upper()
 
 
+def ordered_people(people) -> list[str]:
+    available = list(dict.fromkeys([str(person) for person in people]))
+    canonical = [person for person in LEADER_ORDER if person in available]
+    extras = sorted([person for person in available if person not in LEADER_ORDER])
+    return canonical + extras
+
+
+def leader_color(person: str) -> str:
+    if person not in LEADER_COLOR_MAP:
+        return LEADER_COLORS[len(LEADER_COLOR_MAP) % len(LEADER_COLORS)]
+    return LEADER_COLOR_MAP[person]
+
+
+def ordered_leader_frame(df: pd.DataFrame) -> pd.DataFrame:
+    ordered = ordered_people(df["person"].dropna().unique())
+    return (
+        df.assign(_leader_order=df["person"].map({person: idx for idx, person in enumerate(ordered)}))
+        .sort_values(["_leader_order", "category"] if "category" in df.columns else ["_leader_order"])
+        .drop(columns=["_leader_order"])
+    )
+
+
 def leader_avatar(person: str) -> str:
     image_path = LEADER_IMAGES.get(person)
     if image_path and image_path.exists():
@@ -941,7 +972,9 @@ def build_plot_theme(fig, height=320):
 
 def radar_chart(category_scores: pd.DataFrame):
     fig = go.Figure()
-    for i, (person, group) in enumerate(category_scores.groupby("person")):
+    ordered_scores = ordered_leader_frame(category_scores)
+    for person in ordered_people(ordered_scores["person"].dropna().unique()):
+        group = ordered_scores[ordered_scores["person"].eq(person)]
         ordered = group.set_index("category").reindex(CATEGORIES).reset_index()
         fig.add_trace(
             go.Scatterpolar(
@@ -949,7 +982,7 @@ def radar_chart(category_scores: pd.DataFrame):
                 theta=[CATEGORY_LABELS.get(x, x) for x in ordered["category"]],
                 fill="toself",
                 name=person,
-                line_color=LEADER_COLORS[i % len(LEADER_COLORS)],
+                line_color=leader_color(person),
                 opacity=0.78,
             )
         )
@@ -964,13 +997,14 @@ def radar_chart(category_scores: pd.DataFrame):
 
 
 def category_bar(category_scores: pd.DataFrame):
+    ordered_scores = ordered_leader_frame(category_scores)
     fig = px.bar(
-        category_scores,
+        ordered_scores,
         x="category",
         y="category_score",
         color="person",
         barmode="group",
-        color_discrete_sequence=LEADER_COLORS,
+        color_discrete_map=LEADER_COLOR_MAP,
         category_orders={"category": CATEGORIES},
         labels={"category_score": "Score", "category": ""},
     )
@@ -982,7 +1016,9 @@ def category_bar(category_scores: pd.DataFrame):
 def trend_chart(timeline: pd.DataFrame, category_scores: pd.DataFrame):
     years = list(range(2019, 2025))
     traces = []
-    for person, group in category_scores.groupby("person"):
+    ordered_scores = ordered_leader_frame(category_scores)
+    for person in ordered_people(ordered_scores["person"].dropna().unique()):
+        group = ordered_scores[ordered_scores["person"].eq(person)]
         base = float(group["category_score"].mean())
         evidence_by_year = (
             timeline[timeline["person"].eq(person)]
@@ -999,14 +1035,14 @@ def trend_chart(timeline: pd.DataFrame, category_scores: pd.DataFrame):
         traces.append((person, values))
 
     fig = go.Figure()
-    for i, (person, values) in enumerate(traces):
+    for person, values in traces:
         fig.add_trace(
             go.Scatter(
                 x=years,
                 y=values,
                 mode="lines+markers",
                 name=person,
-                line=dict(color=LEADER_COLORS[i % len(LEADER_COLORS)], width=2),
+                line=dict(color=leader_color(person), width=2),
                 marker=dict(size=7),
             )
         )
@@ -1090,7 +1126,7 @@ def render_hero():
 
 
 def render_leadership_score(leader_scores: pd.DataFrame):
-    ordered = leader_scores.sort_values("person")
+    ordered = ordered_leader_frame(leader_scores)
     cards = []
     for _, row in ordered.iterrows():
         score = float(row["overall_governance_score"])
@@ -1126,8 +1162,9 @@ def render_kpis(category_scores: pd.DataFrame):
         "Transparency": "AUD",
         "Innovation": "INN",
     }
-    piv = category_scores.pivot_table(index="category", columns="person", values="category_score", aggfunc="mean")
-    people = list(category_scores["person"].drop_duplicates())
+    ordered_scores = ordered_leader_frame(category_scores)
+    piv = ordered_scores.pivot_table(index="category", columns="person", values="category_score", aggfunc="mean")
+    people = ordered_people(ordered_scores["person"].drop_duplicates())
     st.markdown('<h3 id="key-performance-indicators-overall">Key Performance Indicators <span class="muted">(Overall)</span></h3>', unsafe_allow_html=True)
     cards = []
     for cat in CATEGORIES:
@@ -1136,7 +1173,7 @@ def render_kpis(category_scores: pd.DataFrame):
         for idx, person in enumerate(people):
             value = float(row.get(person, 0))
             score_spans.append(
-                f"<span style='color:{LEADER_COLORS[idx % len(LEADER_COLORS)]};'>{value:.1f}</span>"
+                f"<span style='color:{leader_color(person)};'>{value:.1f}</span>"
             )
         weight = category_scores.loc[category_scores["category"].eq(cat), "weight"].max()
         cards.append(
@@ -1147,9 +1184,9 @@ def render_kpis(category_scores: pd.DataFrame):
             f"</div>"
         )
     legend_items = []
-    for idx, person in enumerate(people):
+    for person in people:
         legend_items.append(
-            f"<span><span class='legend-dot' style='background:{LEADER_COLORS[idx % len(LEADER_COLORS)]};'></span>{person}</span>"
+            f"<span><span class='legend-dot' style='background:{leader_color(person)};'></span>{person}</span>"
         )
     st.markdown(
         f"""
@@ -1247,7 +1284,8 @@ def page_category(title: str, category: str, category_scores: pd.DataFrame, evid
             x="person",
             y="category_score",
             color="person",
-            color_discrete_sequence=LEADER_COLORS,
+            color_discrete_map=LEADER_COLOR_MAP,
+            category_orders={"person": ordered_people(filtered_scores["person"].dropna().unique())},
             labels={"category_score": "Score", "person": ""},
         )
         fig.update_yaxes(range=[0, 100])
@@ -1456,7 +1494,8 @@ def page_timeline(timeline: pd.DataFrame, category_scores: pd.DataFrame):
         color="person",
         symbol="category",
         hover_data=["indicator", "source_id", "confidence"],
-        color_discrete_sequence=["#68d85f", "#5f8cff"],
+        color_discrete_map=LEADER_COLOR_MAP,
+        category_orders={"person": ordered_people(clean["person"].dropna().unique())},
     )
     st.plotly_chart(build_plot_theme(fig, height=380), use_container_width=True, config={"responsive": True, "displayModeBar": False})
     st.dataframe(timeline, use_container_width=True, hide_index=True)
