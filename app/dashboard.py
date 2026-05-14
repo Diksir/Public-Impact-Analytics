@@ -79,6 +79,21 @@ PAGE_NAMES = [
     "About Project",
 ]
 
+MOBILE_PAGE_NAMES = [
+    "Overview",
+    "Leadership Profiles",
+    "Infrastructure",
+    "Economy",
+    "Youth Empowerment",
+    "Crisis Management",
+    "Governance Scorecard",
+    "Timeline Analysis",
+    "Source Verification",
+    "Methodology",
+    "Downloads",
+    "About Project",
+]
+
 st.set_page_config(
     page_title="Governance Intelligence Platform",
     page_icon="",
@@ -650,6 +665,32 @@ def local_css():
         }
         .js-plotly-plot { max-width: 100% !important; }
 
+        .mobile-nav {
+          margin-bottom: 12px;
+          padding: 12px;
+          border: 1px solid rgba(190, 174, 225, 0.16);
+          border-radius: 8px;
+          background: rgba(10, 8, 16, 0.86);
+        }
+
+        .mobile-nav-title {
+          font-size: 0.76rem;
+          color: var(--gold);
+          font-weight: 800;
+          margin-bottom: 8px;
+        }
+
+        .compact-disclaimer {
+          border: 1px solid rgba(154, 180, 220, 0.22);
+          border-radius: 8px;
+          padding: 10px 12px;
+          margin-bottom: 12px;
+          background: rgba(13, 19, 36, 0.72);
+          color: #dce6f7;
+          font-size: 0.78rem;
+          line-height: 1.45;
+        }
+
         /* Scrollbar */
         ::-webkit-scrollbar { width: 4px; height: 4px; }
         ::-webkit-scrollbar-track { background: rgba(10,8,16,0.6); }
@@ -680,6 +721,35 @@ def local_css():
             max-width: 100% !important;
           }
 
+          .mobile-nav {
+            margin-bottom: 10px;
+            padding: 10px 11px;
+            border: 1px solid rgba(190, 174, 225, 0.16);
+            border-radius: 8px;
+            background: rgba(10, 8, 16, 0.86);
+          }
+
+          .mobile-nav + div[data-testid="stVerticalBlock"] {
+            gap: 0.35rem !important;
+          }
+
+          .mobile-nav-title {
+            font-size: 0.72rem;
+            color: var(--gold);
+            font-weight: 800;
+            margin-bottom: 8px;
+          }
+
+          .mobile-nav div[data-testid="stSelectbox"] {
+            margin-bottom: 8px;
+          }
+
+          .compact-disclaimer {
+            font-size: 0.7rem;
+            padding: 8px 10px;
+            margin-bottom: 9px;
+          }
+
           /* STACK STREAMLIT COLUMNS */
           [data-testid="stHorizontalBlock"],
           [data-testid="stColumns"] {
@@ -701,6 +771,7 @@ def local_css():
             padding: 20px 16px !important;
             border-radius: var(--radius-sm) !important;
             align-items: flex-start !important;
+            background-position: center center !important;
           }
 
           .hero h1 {
@@ -712,6 +783,7 @@ def local_css():
             font-size: 0.8rem !important;
             margin: 10px 0 14px 0 !important;
             line-height: 1.5 !important;
+            max-width: 100% !important;
           }
 
           /* Buttons — full-width stacked column */
@@ -1110,42 +1182,26 @@ def download_button(label: str, path: Path, mime: str):
         st.button(f"{label} unavailable", disabled=True, use_container_width=True)
 
 
-def render_sidebar(data: dict):
-    st.sidebar.markdown(
+def render_app_nav():
+    st.markdown(
         """
-        <div style="padding: 12px 4px 18px 4px;">
-          <div style="display:flex; gap:10px; align-items:center;">
-            <div style="width:46px;height:46px;border-radius:999px;border:1px solid rgba(244,189,60,.7);display:grid;place-items:center;color:#f4bd3c;font-weight:900;">GI</div>
-            <div>
-              <div style="font-size:1.03rem;font-weight:900;line-height:1.18;">Gombe Governance<br/>Intelligence Platform</div>
-              <div style="color:#f4bd3c;font-size:.78rem;margin-top:6px;">Evidence. Transparency. Impact.</div>
-            </div>
-          </div>
-        </div>
+        <div class="mobile-nav">
+          <div class="mobile-nav-title">Dashboard Navigation</div>
         """,
         unsafe_allow_html=True,
     )
-    page = st.sidebar.radio("Navigation", PAGE_NAMES, label_visibility="collapsed")
-    period = "All Years"
-    st.sidebar.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
-    category = st.sidebar.selectbox("Category Filter", ["All Categories"] + CATEGORIES)
-    st.sidebar.markdown(
-        """
-        <style>
-        .sidebar-quote { margin-top: 28px; padding: 16px; border-radius: 9px;
-          background: linear-gradient(180deg,rgba(19,36,61,.84),rgba(10,21,37,.84));
-          border: 1px solid rgba(154,180,220,.18); }
-        @media (max-width: 768px) { .sidebar-quote { margin-top: 16px; padding: 12px; } }
-        </style>
-        <div class="sidebar-quote">
-          <div style="font-size:1.6rem;color:#6f7f96;">"</div>
-          <div style="font-size:.88rem;line-height:1.6;color:#f6f8fc;">Good governance is measured through evidence, service delivery, and public accountability.</div>
-          <div style="margin-top:12px;color:#f4bd3c;font-weight:800;font-size:.8rem;">- Civic Intelligence Initiative</div>
-        </div>
-        """,
-        unsafe_allow_html=True,
+    selected_page = st.selectbox(
+        "Section",
+        MOBILE_PAGE_NAMES,
+        label_visibility="collapsed",
     )
-    return page, period, category
+    selected_category = st.selectbox(
+        "Category",
+        ["All Categories"] + CATEGORIES,
+        label_visibility="collapsed",
+    )
+    st.markdown("</div>", unsafe_allow_html=True)
+    return selected_page, "All Years", selected_category
 
 
 def filtered_data(data: dict, period: str, category: str):
@@ -1161,11 +1217,11 @@ def filtered_data(data: dict, period: str, category: str):
 
 def render_hero():
     st.markdown(
-        f"""
+        """
         <div class="hero">
           <div>
-            <h1>Evidence-Based Governance.<br/><span class="gold">Data-Driven Decisions.</span></h1>
-            <p>{DISCLAIMER} It compares full leadership journeys and measurable public-sector performance using verifiable data, research, citations, and transparent scoring methods.</p>
+            <h1>Leadership Evidence.<br/><span class="gold">Public Impact Intelligence.</span></h1>
+            <p>Compare complete leadership journeys, institutional service records, policy outcomes, public impact, controversies, and documented limitations through cited public evidence.</p>
             <div class="button-row">
               <a class="primary-btn" href="#key-performance-indicators-overall">Explore Dashboard <span>→</span></a>
               <a class="ghost-btn" href="#methodology">View Methodology</a>
@@ -1684,8 +1740,8 @@ def page_about():
 def main():
     local_css()
     data = load_data(data_version())
-    page, period, selected_category = render_sidebar(data)
-    st.info(DISCLAIMER)
+    page, period, selected_category = render_app_nav()
+    st.markdown(f'<div class="compact-disclaimer">{DISCLAIMER}</div>', unsafe_allow_html=True)
     evidence, category_scores = filtered_data(data, period, selected_category)
 
     if page in {"Overview", "Executive Summary"}:
