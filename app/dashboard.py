@@ -35,8 +35,8 @@ CATEGORIES = [
 ]
 
 LEADER_ORDER = [
-    "Dr. Jamilu Isyaku Gwamna",
     "Prof. Isa Ali Ibrahim Pantami",
+    "Dr. Jamilu Isyaku Gwamna",
     "Hon. Saidu Ahmed Alkali",
 ]
 LEADER_COLORS = ["#68d85f", "#5f8cff", "#f4bd3c", "#28c4b7", "#ff8a3c"]
@@ -512,10 +512,16 @@ def local_css():
           display: flex;
           gap: 18px;
           margin: 12px 0 4px 0;
-          color: var(--muted);
+          color: #f2f4fb;
           flex-wrap: wrap;
           font-size: 0.88rem;
           align-items: center;
+        }
+
+        .legend span {
+          color: #f2f4fb !important;
+          font-weight: 700;
+          text-shadow: 0 1px 2px rgba(0,0,0,0.45);
         }
 
         .legend-dot {
@@ -628,7 +634,12 @@ def local_css():
         }
 
         /* Charts */
-        .stPlotlyChart { border-radius: var(--radius-sm); overflow: hidden; max-width: 100% !important; }
+        .stPlotlyChart {
+          border-radius: var(--radius-sm);
+          overflow: visible !important;
+          max-width: 100% !important;
+          padding-bottom: 10px;
+        }
         .js-plotly-plot { max-width: 100% !important; }
 
         /* Scrollbar */
@@ -774,6 +785,7 @@ def local_css():
 
           /* Legend */
           .legend { font-size: 0.76rem !important; gap: 8px !important; }
+          .stPlotlyChart { padding-bottom: 18px !important; }
 
           /* Source rows */
           .source-row { font-size: 0.78rem !important; padding: 7px 8px !important; }
@@ -847,7 +859,9 @@ def local_css():
           .kpi-title { font-size: 0.6rem !important; }
           .kpi-scores { font-size: 0.82rem !important; }
 
-          .legend { font-size: 0.7rem !important; flex-direction: column !important; gap: 5px !important; }
+          .legend { font-size: 0.78rem !important; flex-direction: column !important; gap: 7px !important; align-items: flex-start !important; }
+          .legend span { color: #f2f4fb !important; }
+          .stPlotlyChart { padding-bottom: 24px !important; }
 
           .avatar { width: 48px !important; height: 48px !important; }
           .score-number { font-size: 1.28rem !important; }
@@ -962,13 +976,23 @@ def build_plot_theme(fig, height=320):
         margin=dict(l=14, r=14, t=36, b=14),
         legend=dict(
             orientation="h",
-            yanchor="bottom",
-            y=1.02,
+            yanchor="top",
+            y=-0.18,
             xanchor="left",
             x=0,
-            font=dict(size=11),
+            font=dict(size=12, color="#f2f4fb"),
+            bgcolor="rgba(5,4,10,0.60)",
+            bordercolor="rgba(190,174,225,0.18)",
+            borderwidth=1,
         ),
         autosize=True,
+    )
+    fig.update_traces(
+        hoverlabel=dict(
+            bgcolor="#12101a",
+            bordercolor="rgba(216,180,90,0.35)",
+            font=dict(color="#f2f4fb"),
+        )
     )
     fig.update_xaxes(gridcolor="rgba(154,180,220,0.12)", zerolinecolor="rgba(154,180,220,0.15)")
     fig.update_yaxes(gridcolor="rgba(154,180,220,0.12)", zerolinecolor="rgba(154,180,220,0.15)")
@@ -993,12 +1017,22 @@ def radar_chart(category_scores: pd.DataFrame):
         )
     fig.update_layout(
         polar=dict(
-            bgcolor="rgba(7, 17, 31, 0.22)",
-            radialaxis=dict(visible=True, range=[0, 100], gridcolor="rgba(154,180,220,0.22)"),
-            angularaxis=dict(gridcolor="rgba(154,180,220,0.18)"),
+            bgcolor="rgba(10, 8, 16, 0.36)",
+            radialaxis=dict(
+                visible=True,
+                range=[0, 100],
+                gridcolor="rgba(242,244,251,0.22)",
+                tickfont=dict(color="#f2f4fb", size=11),
+            ),
+            angularaxis=dict(
+                gridcolor="rgba(242,244,251,0.16)",
+                tickfont=dict(color="#f2f4fb", size=12),
+            ),
         )
     )
-    return build_plot_theme(fig, height=320)
+    themed = build_plot_theme(fig, height=380)
+    themed.update_layout(margin=dict(l=42, r=42, t=24, b=92))
+    return themed
 
 
 def category_bar(category_scores: pd.DataFrame):
