@@ -156,19 +156,6 @@ def plural(count: int, singular: str, plural_label: str | None = None) -> str:
     return f"{count} {singular if count == 1 else plural_label or singular + 's'}"
 
 
-def add_title_page(doc: Document) -> None:
-    add_center(doc, "AMERICAN UNIVERSITY OF NIGERIA", 12, True, 4)
-    add_center(doc, "COURSE: DATA SCIENCE AND ANALYTICS", 12, True, 30)
-    add_center(doc, "PUBLIC IMPACT ANALYTICS", 16, True, 2)
-    add_center(doc, "EVIDENCE-BASED GOVERNANCE PERFORMANCE RESEARCH", 16, True, 24)
-    add_center(doc, "A CAPSTONE PROJECT REPORT", 13, True, 6)
-    add_center(doc, "ON CIVIC-TECH GOVERNANCE ANALYTICS", 13, True, 30)
-    add_center(doc, "SUBMITTED BY", 12, True, 6)
-    add_center(doc, "ABUBAKAR AHMAD", 12, True, 36)
-    add_center(doc, date.today().strftime("%B %Y"), 12, False, 0)
-    doc.add_page_break()
-
-
 def build_report() -> Path:
     REPORTS.mkdir(parents=True, exist_ok=True)
     doc = Document(TEMPLATE) if TEMPLATE.exists() else Document()
@@ -179,8 +166,6 @@ def build_report() -> Path:
     category_scores = pd.read_csv(DATA / "category_scores.csv")
     evidence = pd.read_csv(DATA / "clean_evidence_ledger.csv")
     sources = pd.read_csv(DATA / "source_verification_table.csv")
-
-    add_title_page(doc)
 
     doc.add_heading("Abstract", level=1)
     add_paragraph(
