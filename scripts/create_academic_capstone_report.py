@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "processed"
 REPORTS = ROOT / "reports"
 TEMPLATE = Path(r"C:\Users\Ctrl Diksir\Downloads\Capstone Project Report.docx")
-OUTPUT = REPORTS / "academic_capstone_project_report.docx"
+OUTPUT = REPORTS / "final_report.docx"
 
 DISCLAIMER = (
     "This study is an independent civic-tech and governance analytics research project "
