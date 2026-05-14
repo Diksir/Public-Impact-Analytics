@@ -1,6 +1,6 @@
 # Governance Performance Analytics Platform
 
-This project is an independent governance analytics and civic-tech research platform based on publicly available information.
+This platform is an independent civic-tech and governance analytics research project based on publicly available information and evidence-based analysis. It does not represent any political party, candidate, or government institution.
 
 It compares publicly documented governance, institutional leadership, and public-service delivery indicators associated with:
 
@@ -25,6 +25,8 @@ The platform is neutral, evidence-based, and designed for civic research. It doe
 - Social-media infographic CSV/PNG-ready data
 - Tableau/Power BI-ready exports
 - Transportation policy dashboard for rail, logistics, public transport reform, and transport-sector accountability evidence
+- Full life-cycle leadership profiles covering early background, education, early career, professional growth, major leadership roles, achievements, public impact, controversies or limitations, and current relevance
+- Leadership Journey Timeline dataset using `candidate_name`, `life_stage`, `year_or_period`, `role_or_event`, `institution`, `sector`, `achievement`, `evidence`, `citation`, `impact_category`, and `impact_score`
 
 ## Install
 
@@ -42,15 +44,16 @@ If you prefer the bundled Codex Python runtime, run the same scripts with the ru
 ## Dashboard Pages
 
 1. Executive Overview
-2. Infrastructure Analysis
-3. Crisis Management Analysis
-4. Economic Impact Analysis
-5. Youth Empowerment Analysis
-6. Public Utility Management
-7. Governance Scorecards
-8. Timeline Analysis
-9. Source Verification Page
-10. Methodology Page
+2. Leadership Profiles
+3. Infrastructure Analysis
+4. Crisis Management Analysis
+5. Economic Impact Analysis
+6. Youth Empowerment Analysis
+7. Public Utility Management
+8. Governance Scorecards
+9. Leadership Journey Timeline
+10. Source Verification Page
+11. Methodology Page
 
 ## Scoring Model
 
@@ -70,4 +73,4 @@ Scores are calculated only from evidence rows with source metadata. Where public
 
 This project is an independent governance analytics and civic-tech research platform based on publicly available information.
 
-All claims are tied to source records. Scores are analytical estimates based on the stated methodology, not definitive judgments of personal character or overall public worth.
+All claims are tied to source records. Scores are analytical estimates based on the stated methodology, not definitive judgments of personal character or overall public worth. Childhood or personal background information is included only when publicly available, verifiable, and cited.

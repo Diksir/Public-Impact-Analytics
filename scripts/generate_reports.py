@@ -11,8 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data" / "processed"
 REPORTS = ROOT / "reports"
 DISCLAIMER = (
-    "This project is an independent governance analytics and civic-tech research "
-    "platform based on publicly available information."
+    "This platform is an independent civic-tech and governance analytics research "
+    "project based on publicly available information and evidence-based analysis. "
+    "It does not represent any political party, candidate, or government institution."
 )
 
 
@@ -84,6 +85,7 @@ def governance_report() -> None:
     leader_scores = pd.read_csv(DATA / "leader_scores.csv")
     category_scores = pd.read_csv(DATA / "category_scores.csv")
     evidence = pd.read_csv(DATA / "clean_evidence_ledger.csv")
+    timeline = pd.read_csv(DATA / "timeline.csv")
 
     doc = Document()
     style_document(
@@ -124,6 +126,14 @@ def governance_report() -> None:
         max_rows=18,
     )
 
+    doc.add_heading("Leadership Journey Timeline", level=1)
+    add_table(
+        doc,
+        timeline,
+        ["candidate_name", "life_stage", "year_or_period", "role_or_event", "institution", "citation", "impact_score"],
+        max_rows=25,
+    )
+
     doc.add_heading("Limitations", level=1)
     for item in [
         "Sector-level outcomes are not treated as sole-person causation.",
@@ -141,7 +151,10 @@ def methodology_report() -> None:
     style_document(doc, "Governance Analytics Methodology", "Data cleaning, KPI generation, scoring formula, and interpretation guidance")
     doc.add_heading("Data Model", level=1)
     doc.add_paragraph(
-        "The platform uses an evidence ledger. Each row contains a person, role period, category, indicator, metric value where available, source id, evidence type, confidence score, and attribution note."
+        "The platform uses two linked research datasets: an evidence ledger for scored governance indicators and a leadership journey timeline for full life-cycle candidate profiles."
+    )
+    doc.add_paragraph(
+        "The leadership journey schema is: candidate_name, life_stage, year_or_period, role_or_event, institution, sector, achievement, evidence, citation, impact_category, and impact_score."
     )
     doc.add_heading("Cleaning Rules", level=1)
     for item in [
@@ -194,4 +207,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

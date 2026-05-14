@@ -11,8 +11,9 @@ EXPORTS = ROOT / "data" / "exports"
 INFOGRAPHICS = ROOT / "assets" / "infographics"
 
 DISCLAIMER = (
-    "This project is an independent governance analytics and civic-tech research "
-    "platform based on publicly available information."
+    "This platform is an independent civic-tech and governance analytics research "
+    "project based on publicly available information and evidence-based analysis. "
+    "It does not represent any political party, candidate, or government institution."
 )
 
 
@@ -96,19 +97,45 @@ def build_leader_scores(category_scores: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows).sort_values("overall_governance_score", ascending=False)
 
 
-def build_timeline(evidence: pd.DataFrame) -> pd.DataFrame:
-    timeline = evidence.copy()
-    timeline["metric_year"] = pd.to_numeric(timeline["metric_year"], errors="coerce")
-    timeline = timeline.sort_values(["metric_year", "person", "category"])
+def build_timeline(journey: pd.DataFrame) -> pd.DataFrame:
+    stage_order = {
+        "Early background": 1,
+        "Education": 2,
+        "Early career": 3,
+        "Professional growth": 4,
+        "Major leadership roles": 5,
+        "Political leadership": 5,
+        "Major achievements": 6,
+        "Community service": 6,
+        "Public impact": 7,
+        "Criticisms and controversies": 7,
+        "Criticisms and limitations": 7,
+        "Current relevance": 8,
+    }
+    timeline = journey.copy()
+    timeline["impact_score"] = pd.to_numeric(timeline["impact_score"], errors="coerce").fillna(0).round(2)
+    timeline["_stage_order"] = timeline["life_stage"].map(stage_order).fillna(99)
+    timeline["_sort_year"] = (
+        timeline["year_or_period"]
+        .astype(str)
+        .str.extract(r"(\d{4})", expand=False)
+        .pipe(pd.to_numeric, errors="coerce")
+        .fillna(9999)
+    )
+    timeline = timeline.sort_values(["candidate_name", "_stage_order", "_sort_year", "role_or_event"])
     return timeline[
         [
-            "metric_year",
-            "person",
-            "category",
-            "indicator",
-            "claim_summary",
-            "source_id",
-            "confidence",
+            "candidate_name",
+            "life_stage",
+            "year_or_period",
+            "role_or_event",
+            "institution",
+            "sector",
+            "achievement",
+            "evidence",
+            "citation",
+            "impact_category",
+            "impact_score",
         ]
     ]
 
@@ -159,6 +186,7 @@ def main() -> None:
     evidence = pd.read_csv(RAW / "evidence_ledger.csv")
     sources = pd.read_csv(RAW / "sources.csv")
     weights = pd.read_csv(RAW / "scoring_weights.csv")
+    journey = pd.read_csv(RAW / "leadership_journey.csv")
 
     evidence = evidence.merge(sources[["source_id", "title", "organization", "url", "reliability_tier"]], on="source_id", how="left")
     evidence["evidence_score"] = evidence.apply(evidence_score, axis=1)
@@ -174,7 +202,7 @@ def main() -> None:
 
     category_scores = build_category_scores(evidence, weights)
     leader_scores = build_leader_scores(category_scores)
-    timeline = build_timeline(evidence)
+    timeline = build_timeline(journey)
 
     evidence.to_csv(PROCESSED / "clean_evidence_ledger.csv", index=False)
     sources.to_csv(PROCESSED / "source_verification_table.csv", index=False)

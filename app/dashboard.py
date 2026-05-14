@@ -20,8 +20,9 @@ LEADER_IMAGES = {
 }
 
 DISCLAIMER = (
-    "This project is an independent governance analytics and civic-tech research "
-    "platform based on publicly available information."
+    "This platform is an independent civic-tech and governance analytics research "
+    "project based on publicly available information and evidence-based analysis. "
+    "It does not represent any political party, candidate, or government institution."
 )
 
 CATEGORIES = [
@@ -51,7 +52,7 @@ CATEGORY_LABELS = {
     "Youth Empowerment": "Youth Empowerment",
     "Crisis Handling": "Crisis Management",
     "Transparency": "Transparency & Accountability",
-    "Public Utility Management": "Public Utilities",
+    "Public Utility Management": "Service Delivery",
     "Innovation": "Innovation & Digital Impact",
 }
 
@@ -60,18 +61,16 @@ PAGE_TO_CATEGORY = {
     "Economy": "Economy",
     "Youth Empowerment": "Youth Empowerment",
     "Crisis Management": "Crisis Handling",
-    "Public Utilities": "Public Utility Management",
 }
 
 PAGE_NAMES = [
     "Overview",
     "Executive Summary",
+    "Leadership Profiles",
     "Infrastructure",
-    "Transportation Policy",
     "Economy",
     "Youth Empowerment",
     "Crisis Management",
-    "Public Utilities",
     "Governance Scorecard",
     "Timeline Analysis",
     "Source Verification",
@@ -191,6 +190,15 @@ def local_css():
            STREAMLIT CHROME
            ===================================================== */
         [data-testid="stHeader"] { background: transparent; height: 0; }
+        [data-testid="stToolbar"],
+        [data-testid="stDecoration"],
+        [data-testid="stStatusWidget"],
+        #MainMenu,
+        header button[kind="header"],
+        header [data-testid="baseButton-header"] {
+          display: none !important;
+          visibility: hidden !important;
+        }
 
         .block-container {
           padding: 1.1rem 1.15rem 1.4rem 1.15rem;
@@ -1053,23 +1061,29 @@ def category_bar(category_scores: pd.DataFrame):
 
 
 def trend_chart(timeline: pd.DataFrame, category_scores: pd.DataFrame):
-    years = list(range(2019, 2025))
+    parsed = pd.to_numeric(timeline["year_or_period"].astype(str).str.extract(r"(\d{4})", expand=False), errors="coerce")
+    valid_years = parsed.dropna().astype(int)
+    if valid_years.empty:
+        years = list(range(2019, 2025))
+    else:
+        years = list(range(int(valid_years.min()), min(2026, int(valid_years.max())) + 1))
     traces = []
     ordered_scores = ordered_leader_frame(category_scores)
     for person in ordered_people(ordered_scores["person"].dropna().unique()):
         group = ordered_scores[ordered_scores["person"].eq(person)]
         base = float(group["category_score"].mean())
         evidence_by_year = (
-            timeline[timeline["person"].eq(person)]
+            timeline[timeline["candidate_name"].eq(person)]
+            .assign(metric_year=parsed[timeline["candidate_name"].eq(person)])
             .dropna(subset=["metric_year"])
             .assign(metric_year=lambda df: df["metric_year"].astype(int))
-            .groupby("metric_year")["confidence"]
-            .sum()
+            .groupby("metric_year")["impact_score"]
+            .mean()
         )
         values = []
         running = max(base - 12, 5)
         for year in years:
-            running = min(100, running + float(evidence_by_year.get(year, 0)) * 6 + 1.7)
+            running = min(100, running + float(evidence_by_year.get(year, 0)) / 18 + 1.2)
             values.append(round(running, 1))
         traces.append((person, values))
 
@@ -1114,7 +1128,7 @@ def render_sidebar(data: dict):
     page = st.sidebar.radio("Navigation", PAGE_NAMES, label_visibility="collapsed")
     st.sidebar.markdown("<div style='height:14px;'></div>", unsafe_allow_html=True)
     years = sorted([int(y) for y in data["evidence"]["metric_year"].dropna().unique()])
-    period = st.sidebar.selectbox("Select Period", ["All Years"] + [str(y) for y in years])
+    period = st.sidebar.selectbox("Scored Evidence Period", ["All Years"] + [str(y) for y in years])
     category = st.sidebar.selectbox("Category Filter", ["All Categories"] + CATEGORIES)
     st.sidebar.markdown(
         """
@@ -1152,7 +1166,7 @@ def render_hero():
         <div class="hero">
           <div>
             <h1>Evidence-Based Governance.<br/><span class="gold">Data-Driven Decisions.</span></h1>
-            <p>{DISCLAIMER} It compares measurable public-sector performance using verifiable data, research, and statistical analysis.</p>
+            <p>{DISCLAIMER} It compares full leadership journeys and measurable public-sector performance using verifiable data, research, citations, and transparent scoring methods.</p>
             <div class="button-row">
               <a class="primary-btn" href="#key-performance-indicators-overall">Explore Dashboard <span>→</span></a>
               <a class="ghost-btn" href="#methodology">View Methodology</a>
@@ -1308,7 +1322,7 @@ def page_overview(data: dict, category_scores: pd.DataFrame, evidence: pd.DataFr
     with bottom_right:
         render_achievements(evidence)
 
-    st.markdown(f'<div class="footer-note">Disclaimer: {DISCLAIMER} It does not represent any political party, candidate, or government institution.</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="footer-note">Disclaimer: {DISCLAIMER}</div>', unsafe_allow_html=True)
 
 
 def page_category(title: str, category: str, category_scores: pd.DataFrame, evidence: pd.DataFrame):
@@ -1420,66 +1434,6 @@ def page_category(title: str, category: str, category_scores: pd.DataFrame, evid
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-def page_transportation_policy(data: dict):
-    st.markdown("<h2>Transportation Policy Dashboard</h2>", unsafe_allow_html=True)
-    evidence = data["evidence"]
-    alkali = evidence[evidence["person"].eq("Hon. Saidu Ahmed Alkali")].copy()
-    transport_terms = (
-        alkali["indicator"].str.contains("rail|transport|freight|policy|logistics|Kano|Kaduna|budget|FERMA", case=False, na=False)
-        | alkali["claim_summary"].str.contains("rail|transport|freight|policy|logistics|Kano|Kaduna|budget|FERMA", case=False, na=False)
-    )
-    transport = alkali[transport_terms].copy()
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Transport Evidence Rows", f"{len(transport):,}")
-    c2.metric("Quantitative Rows", f"{int((transport['evidence_type'] == 'quantitative').sum()):,}")
-    c3.metric("Rail/Infra Items", f"{int(transport['category'].eq('Infrastructure').sum()):,}")
-    c4.metric("Policy/Innovation Items", f"{int(transport['category'].eq('Innovation').sum()):,}")
-
-    left, right = st.columns([1.1, 1], gap="medium")
-    with left:
-        st.markdown('<div class="panel"><h3>Transport-Related Score Profile</h3>', unsafe_allow_html=True)
-        alkali_scores = data["category_scores"][data["category_scores"]["person"].eq("Hon. Saidu Ahmed Alkali")]
-        fig = px.bar(
-            alkali_scores,
-            x="category",
-            y="category_score",
-            color="category",
-            color_discrete_sequence=LEADER_COLORS,
-            category_orders={"category": CATEGORIES},
-            labels={"category_score": "Score", "category": ""},
-        )
-        fig.update_yaxes(range=[0, 100])
-        st.plotly_chart(build_plot_theme(fig, height=320), use_container_width=True, config={"responsive": True, "displayModeBar": False})
-        st.markdown("</div>", unsafe_allow_html=True)
-    with right:
-        st.markdown('<div class="panel"><h3>Policy And Reform Evidence</h3>', unsafe_allow_html=True)
-        st.dataframe(
-            transport[
-                [
-                    "category",
-                    "indicator",
-                    "metric_value",
-                    "metric_unit",
-                    "metric_year",
-                    "evidence_type",
-                    "confidence",
-                    "source_id",
-                ]
-            ],
-            hide_index=True,
-            use_container_width=True,
-        )
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown('<div class="panel"><h3>Transportation Evidence Narrative</h3>', unsafe_allow_html=True)
-    st.dataframe(
-        transport[["indicator", "claim_summary", "attribution_note", "title", "url"]],
-        hide_index=True,
-        use_container_width=True,
-    )
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
 def page_scorecards(category_scores: pd.DataFrame):
     st.markdown('<h2 id="governance-scorecards">Governance Scorecards</h2>', unsafe_allow_html=True)
     left, right = st.columns([1, 1], gap="medium")
@@ -1521,23 +1475,133 @@ def page_scorecards(category_scores: pd.DataFrame):
     st.markdown("</div>", unsafe_allow_html=True)
 
 
-def page_timeline(timeline: pd.DataFrame, category_scores: pd.DataFrame):
-    st.markdown("<h2>Timeline Analysis</h2>", unsafe_allow_html=True)
-    st.markdown('<div class="panel"><h3>Evidence Timeline</h3>', unsafe_allow_html=True)
-    clean = timeline.dropna(subset=["metric_year"]).copy()
+def parse_timeline_years(timeline: pd.DataFrame) -> pd.Series:
+    return pd.to_numeric(timeline["year_or_period"].astype(str).str.extract(r"(\d{4})", expand=False), errors="coerce")
+
+
+def source_options(sources: pd.DataFrame) -> dict:
+    return sources.set_index("source_id")[["title", "organization", "url"]].to_dict("index")
+
+
+def page_leadership_profiles(timeline: pd.DataFrame, sources: pd.DataFrame):
+    st.markdown("<h2>Complete Leadership Profiles</h2>", unsafe_allow_html=True)
+    st.markdown(
+        f"""
+        <div class="panel">
+          <h3>Research Boundary</h3>
+          <p>{DISCLAIMER}</p>
+          <p class="muted">Verified facts, reported public controversies, and analytical scoring are separated. Childhood, family or personal background details appear only when public, verifiable, and cited; otherwise the profile records a limitation.</p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+    coverage = (
+        timeline.assign(has_positive_context=timeline["impact_score"].fillna(0).astype(float).gt(0))
+        .groupby("candidate_name", as_index=False)
+        .agg(
+            lifecycle_rows=("life_stage", "count"),
+            early_background_rows=("life_stage", lambda x: int((x == "Early background").sum())),
+            education_rows=("life_stage", lambda x: int((x == "Education").sum())),
+            early_career_rows=("life_stage", lambda x: int((x == "Early career").sum())),
+            cited_sources=("citation", "nunique"),
+            scored_context_rows=("has_positive_context", "sum"),
+        )
+    )
+    st.markdown('<div class="panel"><h3>Lifecycle Coverage Snapshot</h3>', unsafe_allow_html=True)
+    st.dataframe(coverage, use_container_width=True, hide_index=True)
+    st.caption("This table shows coverage, not political preference. Lower early-life coverage means fewer verifiable public records were found, not a negative judgment.")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    candidate = st.selectbox("Candidate", ordered_people(timeline["candidate_name"].dropna().unique()))
+    profile = timeline[timeline["candidate_name"].eq(candidate)].copy()
+    citations = source_options(sources)
+
+    stages = [
+        "Early background",
+        "Education",
+        "Early career",
+        "Professional growth",
+        "Major leadership roles",
+        "Political leadership",
+        "Major achievements",
+        "Community service",
+        "Public impact",
+        "Criticisms and controversies",
+        "Criticisms and limitations",
+        "Current relevance",
+    ]
+    cards = []
+    for stage in stages:
+        group = profile[profile["life_stage"].eq(stage)]
+        if group.empty:
+            continue
+        items = []
+        for _, row in group.iterrows():
+            source = citations.get(row["citation"], {})
+            link = source.get("url", "")
+            source_label = f'{row["citation"]}: {source.get("organization", "Source")}'
+            citation_html = f"<a href='{link}' target='_blank'>{source_label}</a>" if link else source_label
+            items.append(
+                f"<li><strong>{row['year_or_period']} - {row['role_or_event']}</strong><br/>"
+                f"<span class='muted'>{row['institution']} | {row['sector']} | {citation_html}</span><br/>"
+                f"{row['achievement']}</li>"
+            )
+        cards.append(
+            f"<div class='panel'><h3>{stage}</h3><ul>{''.join(items)}</ul></div>"
+        )
+    st.markdown("".join(cards), unsafe_allow_html=True)
+
+    st.markdown('<div class="panel"><h3>Candidate Lifecycle Dataset</h3>', unsafe_allow_html=True)
+    st.dataframe(profile, use_container_width=True, hide_index=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+def page_timeline(timeline: pd.DataFrame, sources: pd.DataFrame):
+    st.markdown("<h2>Leadership Journey Timeline</h2>", unsafe_allow_html=True)
+    st.markdown('<div class="panel"><h3>Full Life-Cycle Leadership Timeline</h3>', unsafe_allow_html=True)
+    clean = timeline.copy()
+    clean["metric_year"] = parse_timeline_years(clean)
+    clean = clean.dropna(subset=["metric_year"])
     clean["metric_year"] = clean["metric_year"].astype(int)
     fig = px.scatter(
         clean,
         x="metric_year",
-        y="category",
-        color="person",
-        symbol="category",
-        hover_data=["indicator", "source_id", "confidence"],
+        y="life_stage",
+        color="candidate_name",
+        symbol="impact_category",
+        size="impact_score",
+        hover_data=["role_or_event", "institution", "citation", "impact_score"],
         color_discrete_map=LEADER_COLOR_MAP,
-        category_orders={"person": ordered_people(clean["person"].dropna().unique())},
+        category_orders={"candidate_name": ordered_people(clean["candidate_name"].dropna().unique())},
     )
     st.plotly_chart(build_plot_theme(fig, height=380), use_container_width=True, config={"responsive": True, "displayModeBar": False})
+    enriched = timeline.merge(
+        sources[["source_id", "title", "organization", "url"]],
+        left_on="citation",
+        right_on="source_id",
+        how="left",
+    ).drop(columns=["source_id"])
     st.dataframe(timeline, use_container_width=True, hide_index=True)
+    st.markdown("</div>", unsafe_allow_html=True)
+
+    st.markdown('<div class="panel"><h3>Citations Beside Timeline Claims</h3>', unsafe_allow_html=True)
+    st.dataframe(
+        enriched[
+            [
+                "candidate_name",
+                "life_stage",
+                "year_or_period",
+                "role_or_event",
+                "evidence",
+                "citation",
+                "title",
+                "organization",
+                "url",
+            ]
+        ],
+        use_container_width=True,
+        hide_index=True,
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
 
@@ -1611,18 +1675,19 @@ def main():
     local_css()
     data = load_data(data_version())
     page, period, selected_category = render_sidebar(data)
+    st.info(DISCLAIMER)
     evidence, category_scores = filtered_data(data, period, selected_category)
 
     if page in {"Overview", "Executive Summary"}:
         page_overview(data, category_scores, evidence)
-    elif page == "Transportation Policy":
-        page_transportation_policy(data)
+    elif page == "Leadership Profiles":
+        page_leadership_profiles(data["timeline"], data["sources"])
     elif page in PAGE_TO_CATEGORY:
         page_category(page, PAGE_TO_CATEGORY[page], data["category_scores"], evidence)
     elif page == "Governance Scorecard":
         page_scorecards(data["category_scores"])
     elif page == "Timeline Analysis":
-        page_timeline(data["timeline"], data["category_scores"])
+        page_timeline(data["timeline"], data["sources"])
     elif page == "Source Verification":
         page_sources(data["sources"], evidence)
     elif page == "Methodology":
