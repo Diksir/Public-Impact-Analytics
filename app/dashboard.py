@@ -1330,7 +1330,7 @@ def render_sources_panel(sources: pd.DataFrame):
 def render_downloads_panel():
     zip_path = ensure_dataset_zip()
     st.markdown('<div class="panel"><h3>Reports & Downloads</h3>', unsafe_allow_html=True)
-    download_button("Final Research Report (DOCX)", REPORTS / "final_public_impact_research_report.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+    download_button("Academic Capstone Report (DOCX)", REPORTS / "academic_capstone_project_report.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     download_button("Full Governance Report (DOCX)", REPORTS / "governance_report.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     download_button("Methodology & Scoring (DOCX)", REPORTS / "methodology.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
     download_button("References & Citations (DOCX)", REPORTS / "references.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
