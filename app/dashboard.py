@@ -114,10 +114,17 @@ def data_version() -> float:
 
 def ensure_dataset_zip() -> Path:
     zip_path = EXPORTS / "all_governance_datasets.zip"
+    source_files = [
+        path for path in EXPORTS.glob("*")
+        if path.is_file() and path.name != zip_path.name
+    ]
+    if zip_path.exists() and source_files:
+        zip_mtime = zip_path.stat().st_mtime
+        if all(path.stat().st_mtime <= zip_mtime for path in source_files):
+            return zip_path
     with ZipFile(zip_path, "w") as archive:
-        for path in EXPORTS.glob("*"):
-            if path.is_file() and path.name != zip_path.name:
-                archive.write(path, path.name)
+        for path in source_files:
+            archive.write(path, path.name)
     return zip_path
 
 
@@ -145,18 +152,18 @@ def local_css():
            DESIGN TOKENS
            ===================================================== */
         :root {
-          --bg: #07111f;
-          --panel: #101d32;
-          --panel-2: #13243d;
-          --line: rgba(154, 180, 220, 0.18);
-          --muted: #aebbd0;
+          --bg: #07050d;
+          --panel: #12101a;
+          --panel-2: #1b1728;
+          --line: rgba(190, 174, 225, 0.18);
+          --muted: #b8b0c8;
           --text: #f6f8fc;
-          --gold: #f4bd3c;
+          --gold: #d8b45a;
           --green: #6fd567;
           --blue: #5f8cff;
           --cyan: #28c4b7;
           --orange: #ff8a3c;
-          --transition: all 0.18s ease;
+          --transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
           --radius-sm: 8px;
           --radius-md: 12px;
         }
@@ -172,7 +179,10 @@ def local_css():
         }
 
         html, body, .stApp {
-          background: radial-gradient(circle at 42% 2%, #1c3455 0, #07111f 42%, #040a13 100%) !important;
+          background:
+            radial-gradient(circle at 18% 4%, rgba(84, 63, 130, 0.36) 0, rgba(84, 63, 130, 0.08) 28%, transparent 46%),
+            radial-gradient(circle at 86% 10%, rgba(45, 37, 70, 0.38) 0, transparent 38%),
+            linear-gradient(135deg, #05040a 0%, #0b0712 55%, #14101f 100%) !important;
           color: var(--text);
           overflow-x: hidden !important;
         }
@@ -191,7 +201,7 @@ def local_css():
            SIDEBAR
            ===================================================== */
         [data-testid="stSidebar"] {
-          background: linear-gradient(180deg, #06101d 0%, #07111f 100%);
+          background: linear-gradient(180deg, #05040a 0%, #0b0712 55%, #100c18 100%);
           border-right: 1px solid var(--line);
         }
 
@@ -213,8 +223,8 @@ def local_css():
         }
 
         [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:hover {
-          background: rgba(244, 189, 60, 0.11);
-          border-color: rgba(244, 189, 60, 0.35);
+          background: rgba(216, 180, 90, 0.10);
+          border-color: rgba(216, 180, 90, 0.30);
         }
 
         [data-testid="stSidebar"] .stRadio div[role="radiogroup"] label:has(input:checked) {
@@ -245,13 +255,13 @@ def local_css():
           border: 1px solid var(--line);
           border-radius: 10px;
           overflow: hidden;
-          background: rgba(8, 18, 32, 0.74);
+          background: rgba(10, 8, 16, 0.78);
           box-shadow: 0 18px 50px rgba(0,0,0,0.32);
         }
 
         .panel {
-          background: linear-gradient(180deg, rgba(19, 36, 61, 0.88), rgba(11, 22, 38, 0.88));
-          border: 1px solid rgba(154, 180, 220, 0.18);
+          background: linear-gradient(180deg, rgba(27, 23, 40, 0.92), rgba(12, 10, 18, 0.94));
+          border: 1px solid rgba(190, 174, 225, 0.16);
           border-radius: var(--radius-md);
           padding: 18px;
           box-shadow:
@@ -276,8 +286,8 @@ def local_css():
           border: 1px solid var(--line);
           border-radius: var(--radius-md);
           background:
-            linear-gradient(90deg, rgba(9, 18, 32, 0.94), rgba(13, 26, 45, 0.82) 48%, rgba(13, 26, 45, 0.48)),
-            linear-gradient(140deg, rgba(244, 189, 60, 0.16), transparent 32%),
+            linear-gradient(90deg, rgba(5, 4, 10, 0.95), rgba(12, 9, 20, 0.84) 48%, rgba(20, 16, 31, 0.56)),
+            linear-gradient(140deg, rgba(216, 180, 90, 0.12), transparent 32%),
             url("__HERO_URL__");
           background-size: cover;
           background-position: center 48%;
@@ -336,15 +346,14 @@ def local_css():
         }
 
         .primary-btn:hover {
-          background: linear-gradient(135deg, #ffe280, #f5c43a);
-          transform: translateY(-1px);
-          box-shadow: 0 4px 18px rgba(244,189,60,0.3);
+          background: linear-gradient(135deg, #f6d77a, #d8b45a);
+          box-shadow: 0 4px 18px rgba(216,180,90,0.20);
         }
 
         .ghost-btn {
-          background: rgba(11, 22, 38, 0.58);
+          background: rgba(12, 10, 18, 0.66);
           color: var(--text) !important;
-          border-color: rgba(235, 241, 252, 0.38);
+          border-color: rgba(224, 216, 242, 0.28);
         }
 
         .ghost-btn:hover {
@@ -370,8 +379,8 @@ def local_css():
         }
 
         .leader-mini {
-          background: linear-gradient(150deg, #152947, #11213a);
-          border: 1px solid rgba(154, 180, 220, 0.16);
+          background: linear-gradient(150deg, rgba(31, 26, 46, 0.96), rgba(16, 13, 24, 0.96));
+          border: 1px solid rgba(190, 174, 225, 0.15);
           border-radius: var(--radius-sm);
           padding: 14px 12px;
           text-align: center;
@@ -380,9 +389,7 @@ def local_css():
         }
 
         .leader-mini:hover {
-          border-color: rgba(244, 189, 60, 0.32);
-          transform: translateY(-2px);
-          box-shadow: 0 6px 24px rgba(0,0,0,0.3);
+          border-color: rgba(216, 180, 90, 0.30);
         }
 
         .avatar {
@@ -447,8 +454,8 @@ def local_css():
           min-height: 150px;
           padding: 12px 10px;
           border-radius: var(--radius-sm);
-          border: 1px solid rgba(154, 180, 220, 0.22);
-          background: linear-gradient(180deg, rgba(21, 40, 68, 0.88), rgba(14, 28, 49, 0.88));
+          border: 1px solid rgba(190, 174, 225, 0.18);
+          background: linear-gradient(180deg, rgba(30, 26, 45, 0.92), rgba(15, 12, 22, 0.94));
           display: flex;
           flex-direction: column;
           justify-content: space-between;
@@ -458,9 +465,7 @@ def local_css():
         }
 
         .kpi-card:hover {
-          border-color: rgba(244, 189, 60, 0.42);
-          transform: translateY(-2px);
-          box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+          border-color: rgba(216, 180, 90, 0.36);
         }
 
         .icon-badge {
@@ -472,8 +477,8 @@ def local_css():
           margin: 0 auto;
           font-size: 0.7rem;
           font-weight: 800;
-          background: rgba(244, 189, 60, 0.12);
-          border: 1px solid rgba(244, 189, 60, 0.32);
+          background: rgba(216, 180, 90, 0.12);
+          border: 1px solid rgba(216, 180, 90, 0.32);
           color: var(--gold);
           letter-spacing: 0.02em;
         }
@@ -533,17 +538,17 @@ def local_css():
           align-items: center;
           padding: 8px 10px;
           border-radius: 7px;
-          background: rgba(7, 17, 31, 0.42);
+          background: rgba(10, 8, 16, 0.56);
           color: #edf4ff;
           transition: var(--transition);
         }
 
-        .source-row:hover { background: rgba(244, 189, 60, 0.06); }
+        .source-row:hover { background: rgba(216, 180, 90, 0.06); }
 
         .source-pill {
           min-width: 34px;
           text-align: center;
-          background: rgba(95, 140, 255, 0.25);
+          background: rgba(95, 140, 255, 0.18);
           color: #cfe0ff;
           padding: 2px 8px;
           border-radius: 5px;
@@ -565,7 +570,7 @@ def local_css():
           border-radius: 999px;
           border: 1px solid rgba(244, 189, 60, 0.5);
           color: var(--gold);
-          background: rgba(244, 189, 60, 0.10);
+          background: rgba(216, 180, 90, 0.10);
           font-weight: 900;
           font-size: 0.88rem;
         }
@@ -596,7 +601,7 @@ def local_css():
 
         div[data-testid="stDownloadButton"] > button,
         div[data-testid="stButton"] > button {
-          background: rgba(7, 17, 31, 0.64);
+          background: rgba(10, 8, 16, 0.72);
           color: #eef4ff;
           border: 1px solid rgba(154, 180, 220, 0.24);
           border-radius: var(--radius-sm);
@@ -612,11 +617,11 @@ def local_css():
         div[data-testid="stButton"] > button:hover {
           border-color: rgba(244, 189, 60, 0.7);
           color: var(--gold);
-          background: rgba(244, 189, 60, 0.07);
+          background: rgba(216, 180, 90, 0.07);
         }
 
         [data-testid="stSelectbox"] > div > div {
-          background: rgba(7, 17, 31, 0.55) !important;
+          background: rgba(10, 8, 16, 0.70) !important;
           border: 1px solid rgba(154, 180, 220, 0.22) !important;
           border-radius: var(--radius-sm) !important;
           color: var(--text) !important;
@@ -628,9 +633,9 @@ def local_css():
 
         /* Scrollbar */
         ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: rgba(7,17,31,0.5); }
-        ::-webkit-scrollbar-thumb { background: rgba(244,189,60,0.38); border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: rgba(244,189,60,0.6); }
+        ::-webkit-scrollbar-track { background: rgba(10,8,16,0.6); }
+        ::-webkit-scrollbar-thumb { background: rgba(216,180,90,0.34); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(216,180,90,0.52); }
 
         /* =====================================================
            BREAKPOINT: TABLET / SMALL LAPTOP (≤ 1200px)
