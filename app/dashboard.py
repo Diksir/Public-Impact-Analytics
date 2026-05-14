@@ -1681,6 +1681,7 @@ def page_about():
         f"""
         <div class="panel">
           <p>{DISCLAIMER}</p>
+          <p><strong>Created by Abubakar Ahmad</strong>, Data Scientist and Analytics Professional.</p>
           <p>This platform is designed for neutral civic research. It compares documented evidence on institutional management, infrastructure, crisis handling, economic contribution, public utility management, and innovation.</p>
           <p class="muted">The dashboard does not generate propaganda, personal attacks, or unsupported statistics. Every scored claim is tied to source metadata in the evidence ledger.</p>
         </div>
